@@ -1,0 +1,6 @@
+- hosts: all
+  vars_files:
+    - ./vars/common.yml
+  roles:
+    - ./roles/django
+

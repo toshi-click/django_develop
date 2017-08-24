@@ -1,0 +1,20 @@
+# Vagrant が作るファイルは Git に反映させない
+/.vagrant/
+
+# dynamically generated files
+*~
+*.bak
+
+# hidden files created by Windows
+Thumbs.db
+desktop.ini
+
+# IDE が勝手に作るプロジェクトファイルは Git に反映させない
+/nbproject/
+
+# Inteliij IDEA が勝手に作るプロジェクトファイルは Git に反映させない
+.idea
+
+# ansible で失敗した場合のファイルを除外
+*.retry
+

@@ -1,0 +1,164 @@
+# selinux 無効　-----------------------------------------------------------------------------------------
+- name: setenforce 0
+  shell: "setenforce 0"
+  register: salt
+  ignore_errors: true
+  changed_when: false
+  tags: selinux
+
+# selinul無効永続化　-----------------------------------------------------------------------------------------
+- name: /etc/selinux/config
+  copy: src="selinux_config" dest=/etc/selinux/config  owner=root group=root mode=0644
+  tags: selinux
+
+# タイムゾーンの設定
+- name: "タイムゾーンの設定 Tokyo"
+  command: timedatectl set-timezone Asia/Tokyo
+
+# 日本語の設定
+- name: "set-locale"
+  command: localectl set-locale LANG=ja_JP.UTF-8
+
+# hosts.allow -----------------------------------------------------------------------------------------
+- name: "/etc/hosts.allow"
+  template: src="hosts.allow.j2" dest="/etc/hosts.allow" owner=root group=root mode=0644
+  tags: hosts
+
+# hosts.deny -----------------------------------------------------------------------------------------
+- name: "/etc/hosts.deny"
+  template: src="hosts.deny.j2" dest="/etc/hosts.deny" owner=root group=root mode=0644
+  tags: hosts
+
+# EPEL インストール -----------------------------------------------------------------------------------------
+- name: epel install
+  yum: name=epel-release state=latest
+
+# パッケージアップデート-----------------------------------------------------------------------------------------
+- name: packages update
+  yum: name=* state=latest
+  tags: packages
+
+# パッケージインストール-----------------------------------------------------------------------------------------
+- name: packages install
+  yum: name={{ item }} state=latest
+  with_items:
+    - wget
+    - tree
+    - git
+    - gcc
+    - openssl-devel
+    - bzip2
+    - readline-devel
+    - mailx
+    - ibus-kkc
+    - vlgothic-p-fonts
+    - ruby
+    - telnet
+    - sysstat
+    - jwhois
+    - patch
+    - sudo
+    - rsyslog
+    - net-tools
+    - vlgothic-*
+    - chrony
+    - yum-cron
+    - iptables-services
+    - firewalld
+    - bind-utils
+    - htop
+    - nmap
+    - yum-utils
+    - device-mapper-persistent-data
+    - lvm2
+    - ansible
+    - sshpass
+    - libdevmapper.so.1.02
+  tags: packages
+
+# latest docker install ##################################################################################
+# Docker関連パッケージを一旦削除
+- name: packages remove
+  yum: name={{ item }} state=absent
+  with_items:
+    - docker
+    - docker-common
+    - container-selinux
+    - docker-selinux
+    - docker-engine
+    - docker-engine-selinux
+
+# docker ceのリポジトリ追加
+- name: "add repo docker ce"
+  shell: "yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo"
+
+- name: "docker ce install"
+  yum: name=docker-ce state=latest
+
+# docker enable-----------------------------------------------------------------------------------------
+- name: docker enable
+  service: name=docker enabled=yes
+  tags: docker
+
+# docker start-----------------------------------------------------------------------------------------
+- name: docker start
+  service: name=docker state=started
+  tags: docker
+
+# Docker comporse-----------------------------------------------------------------------------------------
+- name: "docker-compose ダウンロード"
+  get_url: url="https://github.com/docker/compose/releases/download/1.14.0/docker-compose-{{ansible_system}}-{{ansible_machine}}" dest=/usr/local/bin/docker-compose
+  tags: docker
+
+- name: "docker-compose インストール"
+  file: path=/usr/local/bin/docker-compose owner=root group=root mode=0755
+  tags: docker
+
+# End latest docker install ##################################################################################
+
+# docker ipv4 forward-----------------------------------------------------------------------------------------
+- name: "Dockerのためにipv4 forwardを設定"
+  copy: src="10-ipv4.conf" dest=/etc/sysctl.d/10-ipv4.conf  owner=root group=root mode=0644
+  tags: docker
+
+# sshd -----------------------------------------------------------------------------------------
+- name: sshd is configured
+  notify:
+    - restart sshd
+  copy: src="sshd_config" dest="/etc/ssh/sshd_config" owner=root group=root mode=0600
+  tags: sshd
+
+- name: sshd is enabled and started
+  service: name=sshd state=started enabled=yes
+  tags: sshd
+
+# yum cron -----------------------------------------------------------------------------------------
+- name: /etc/yum/yum-cron.conf
+  copy: src="yum-cron.conf" dest=/etc/yum/yum-cron.conf  owner=root group=root mode=0644
+
+- name: /etc/cron.hourly/0yum-hourly.cron
+  copy: src="0yum-hourly.cron" dest=/etc/cron.hourly/0yum-hourly.cron  owner=root group=root mode=0755
+
+- name: yum-cron start enable
+  service: name=yum-cron state=started enabled=yes
+
+# suの制限-----------------------------------------------------------------------------------------
+- name: /etc/pam.d/su
+  copy: src="su" dest=/etc/pam.d/su  owner=root group=root mode=0644
+
+# NTP-----------------------------------------------------------------------------------------
+- name: chronyd start enable
+  service: name=chronyd  state=started enabled=yes
+
+# メール配送先設定 -----------------------------------------------------------------------------------------
+- name: aliases set
+  copy: src="aliases" dest=/etc/aliases  owner=root group=root mode=0644
+  notify:
+    - restart postfix
+
+- name: newaliases
+  command: newaliases
+
+# ssh ログインでメール送る設定のべき等性
+- name: sshrc
+  template: src="sshrc.j2" dest="/etc/ssh/sshrc" owner=root group=root mode=0755

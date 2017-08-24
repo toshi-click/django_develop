@@ -1,0 +1,11 @@
+- name: restart sshd
+  service: name=sshd state=restarted
+
+- name: restart docker
+  service: name=docker state=restarted
+
+- name: enable docker
+  service: name=docker enabled=yes
+
+- name: restart postfix
+  service: name=postfix state=restarted

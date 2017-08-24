@@ -1,0 +1,11 @@
+hosts:
+  accept_sshd_address:
+    # local
+    - { ip: 127.0.0.1 }
+    # vagrant
+    - { ip: 10.0.2.2 }
+    # local
+    - { ip: 192.168. }
+    - { ip: 172.16. }
+
+

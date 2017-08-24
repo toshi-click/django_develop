@@ -1,0 +1,44 @@
+# docker-composeバージョンの宣言
+version: '3'
+services:
+  proxy:
+    container_name: proxy
+    build: proxy
+    privileged: true
+    environment:
+      ENABLE_IPV6: "true"
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /export/certs:/etc/nginx/certs:ro
+      - /etc/nginx/htpasswd
+      - /etc/nginx/vhost.d
+      - /usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+
+  postgres:
+    container_name: postgres
+    build: postgresql
+    volumes:
+      - db:/var/lib/postgresql/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  django:
+    build: django
+    container_name: django
+    hostname: vm.django
+    environment:
+      VIRTUAL_HOST: vm.django
+    command: python manage.py runserver 0.0.0.0:80
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ../core:/core
+    links:
+      - postgres
+    ports:
+      - "80"
+
+volumes:
+  db:
+    driver: local
